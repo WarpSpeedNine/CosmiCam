@@ -3,48 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CosmiCam</title>
-    <style>
-        body {
-            background-color: #f0f0f0; /* background color */
-            font-family: sans-serif; 
-            margin: 0; 
-            padding: 0; 
-        }
-
-        header {
-            background-color: #ffffff; /* header background color */
-            padding: 20px; 
-            text-align: center; 
-            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1); 
-        }
-
-        h1 {
-            color: #333; /* header text color */
-            margin: 0; 
-        }
-
-        .container {
-          max-width: 960px; 
-          margin: 20px auto; 
-          padding: 20px;
-          background-color: #fff; 
-          border-radius: 5px; 
-          box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.05); 
-        }
-
-    </style>
+    <title>CosmiCam - Sky View</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link href="/css/style.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">CosmiCam</a>
+        </div>
+    </nav>
 
-    <header>
-        <h1>CosmiCam</h1>
-    </header>
-
-    <div class="container">
-      <p>WIP</p>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10">
+                <div class="card">
+                    <div class="card-body position-relative">
+                        <h5 class="card-title">Current Sky View</h5>
+                        <p class="timestamp mb-3">Last Updated: <span id="timestamp">Loading...</span></p>
+                        <div class="text-center">
+                            <img id="skyImage" src="/images/loading.gif" alt="Current sky view" class="sky-image">
+                            <div class="loading">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Camera Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Sun Phase:</strong> <span id="sunPhase">Loading...</span></p>
+                                <p><strong>Camera Profile:</strong> <span id="cameraProfile">Loading...</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Shutter Speed:</strong> <span id="shutterSpeed">Loading...</span></p>
+                                <p><strong>Gain:</strong> <span id="gain">Loading...</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
 </body>
 </html>

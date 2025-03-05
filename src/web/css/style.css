@@ -1,0 +1,42 @@
+.sky-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.timestamp {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+}
+
+/* Sun phase badges */
+.badge-day {
+    background-color: #ffc107;
+}
+
+.badge-civil_twilight {
+    background-color: #fd7e14;
+}
+
+.badge-nautical_twilight {
+    background-color: #6f42c1;
+}
+
+.badge-astronomical_twilight {
+    background-color: #343a40;
+    color: white;
+}
+
+.badge-night {
+    background-color: #000;
+    color: white;
+}

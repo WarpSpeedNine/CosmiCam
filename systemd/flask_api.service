@@ -1,0 +1,18 @@
+[Unit]
+Description=CosmiCam Flask API Service
+After=network.target nginx.service
+Wants=nginx.service
+
+[Service]
+User=Kepler
+Group=Kepler
+WorkingDirectory=/home/Kepler/CosmiCam
+Environment="PATH=/home/Kepler/CosmiCam/venv/bin"
+Environment="PYTHONPATH=/home/Kepler/CosmiCam"
+Environment="COSMICAM_ROOT=/home/Kepler/CosmiCam"
+ExecStart=/home/Kepler/CosmiCam/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 'src.api.wsgi:app'
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

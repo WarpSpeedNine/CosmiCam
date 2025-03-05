@@ -1,0 +1,19 @@
+[Unit]
+Description=CosmiCam Image Capture Service
+After=network.target nginx.service flask_api.service
+Wants=flask_api.service
+
+[Service]
+User=Kepler
+Group=Kepler
+WorkingDirectory=/home/Kepler/CosmiCam
+Environment="PATH=/home/Kepler/CosmiCam/venv/bin:/usr/bin"
+Environment="PYTHONPATH=/home/Kepler/CosmiCam"
+Environment="COSMICAM_ROOT=/home/Kepler/CosmiCam"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/home/Kepler/CosmiCam/venv/bin/python3 -m src.camera.capture_service
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

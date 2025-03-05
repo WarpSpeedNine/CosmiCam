@@ -1,0 +1,16 @@
+# Default system settings
+
+# Image capture interval in seconds
+capture_interval: 60
+
+# Maximum disk usage for images in GB
+max_disk_usage_gb: 40
+
+# Fan control settings
+fan_control:
+  # How often to log fan status (seconds)
+  log_interval: 300
+  
+  # Temperature thresholds (°C)
+  min_temp: 40
+  max_temp: 80

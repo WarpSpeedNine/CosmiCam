@@ -12,15 +12,16 @@ from src.config import config
 from src.utils import setup_logger
 
 # Configuration
-CHIP_NAME = "gpiochip0"
+CHIP_NAME = "gpiochip0"  # Change to your specific chip
 PWM_LINE = 13  # GPIO13 for PWM control
 TACH_PIN = 6   # GPIO6 for tach reading
 PWM_FREQUENCY = 10000  # 10 kHz
 TEMPERATURE_CHECK_INTERVAL = 60  # seconds
-TACH_CHECK_INTERVAL = 60  # 15 minutes in seconds
+TACH_CHECK_INTERVAL = 900  # 15 minutes in seconds
 
-# Set GPIO mode for tachometer reading
-GPIO.setmode(GPIO.BCM)
+# Set GPIO mode for tachometer reading - only set mode once
+GPIO.setwarnings(False)  # Disable warnings that might occur when re-initializing pins
+GPIO.setmode(GPIO.BCM)   # Use BCM pin numbering
 
 class PWMController:
     """Software PWM implementation for Raspberry Pi using RPi.GPIO"""
@@ -93,13 +94,19 @@ class PWMController:
 class FanController:
     """Controls the cooling fan based on CPU temperature"""
     
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, debug_mode=False):
         """Initialize the fan controller"""
         self.logger = logger or logging.getLogger("FAN")
         self.pwm = None
         self.running = False
+        self.debug_mode = debug_mode
         self.fan_settings = config.get_config('system_settings')['fan_control']
         self.logger.info(f"Fan controller initialized with settings: {self.fan_settings}")
+        
+        # Set up debug logging if requested
+        if self.debug_mode:
+            self.logger.setLevel(logging.DEBUG)
+            self.logger.debug("Debug mode enabled")
         
     def get_cpu_temperature(self):
         """Get CPU temperature using vcgencmd"""
@@ -115,10 +122,10 @@ class FanController:
         """Calculate duty cycle based on temperature"""
         if temp is None:
             return 50  # Default to 50% if temperature reading fails
-        elif temp < 30:
-            return 0
         elif temp < 40:
-            return 90
+            return 10
+        elif temp < 45:
+            return 20
         elif temp < 50:
             return 30
         elif temp < 55:
@@ -128,39 +135,116 @@ class FanController:
         else:
             return 100
 
-    def read_tach(self, duration=1):
+    def read_tach(self, duration=2):
         """
-        Read tachometer pulses to calculate fan RPM
-        Using RPi.GPIO for event detection
+        Read tachometer pulses to calculate fan RPM using a direct polling approach
+        
+        This method works by directly measuring the time between tach pulses
+        rather than trying to count them over a fixed time window.
         """
-        # Setup before pulse counting
-        GPIO.cleanup(TACH_PIN)  # Clean up the pin first to avoid conflicts
-        
-        pulse_count = 0
-        start_time = time.time()
-        
-        def count_pulse(channel):
-            nonlocal pulse_count
-            pulse_count += 1
-        
-        # Configure tach pin
-        GPIO.setup(TACH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        
         try:
-            GPIO.add_event_detect(TACH_PIN, GPIO.FALLING, callback=count_pulse)
-            time.sleep(duration)
-            GPIO.remove_event_detect(TACH_PIN)
-        except RuntimeError as e:
-            self.logger.error(f"Failed to setup edge detection: {e}")
-            return 0  # Return 0 RPM on error
-        
-        elapsed_time = time.time() - start_time
-        if elapsed_time > 0:
-            rpm = (pulse_count * 60) / (2 * elapsed_time)  # Assuming 2 pulses per revolution
-        else:
-            rpm = 0
-        
-        return rpm
+            # Clean up any existing event detection
+            try:
+                GPIO.remove_event_detect(TACH_PIN)
+            except:
+                pass
+                
+            # Configure tach pin - try both pull-up and pull-down
+            # Some fans need pull-up and others need pull-down
+            GPIO.setup(TACH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            
+            # Wait for pin to stabilize
+            time.sleep(0.01)
+            
+            # Debug: Check initial state
+            initial_state = GPIO.input(TACH_PIN)
+            self.logger.debug(f"Tach pin initial state: {initial_state}")
+            
+            # Start time measurement
+            start_time = time.time()
+            pulse_count = 0
+            last_state = initial_state
+            
+            # Use direct polling
+            max_duration = duration  # Maximum time to wait for pulses
+            
+            while time.time() - start_time < max_duration:
+                current_state = GPIO.input(TACH_PIN)
+                
+                # Count rising edges (change from 0 to 1)
+                if current_state == 1 and last_state == 0:
+                    pulse_count += 1
+                    # Log first few pulses for debugging
+                    if pulse_count <= 5:
+                        self.logger.debug(f"Tach pulse detected: {pulse_count}")
+                
+                last_state = current_state
+                # Very short sleep to prevent CPU overuse but still catch fast pulses
+                time.sleep(0.0001)
+            
+            # Calculate elapsed time
+            elapsed_time = time.time() - start_time
+            
+            # Debug info
+            self.logger.debug(f"Tach read: {pulse_count} pulses in {elapsed_time:.2f} seconds")
+            
+            # If no pulses, try again with pull-down resistor
+            if pulse_count == 0 and GPIO.input(TACH_PIN) == initial_state:
+                self.logger.debug("No pulses detected with pull-up, trying pull-down")
+                GPIO.setup(TACH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+                time.sleep(0.01)
+                
+                # Try again with pull-down
+                start_time = time.time()
+                last_state = GPIO.input(TACH_PIN)
+                while time.time() - start_time < max_duration / 2:  # Half duration for retry
+                    current_state = GPIO.input(TACH_PIN)
+                    if current_state == 1 and last_state == 0:
+                        pulse_count += 1
+                    last_state = current_state
+                    time.sleep(0.0001)
+                
+                # Recalculate elapsed time
+                elapsed_time = time.time() - start_time + (max_duration / 2)
+                self.logger.debug(f"Retry with pull-down: {pulse_count} pulses in {elapsed_time:.2f} seconds")
+            
+            # If still no pulses, try one more time with both edges
+            if pulse_count == 0:
+                self.logger.debug("No pulses detected, trying to detect any pin changes")
+                GPIO.setup(TACH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+                time.sleep(0.01)
+                
+                # Try again detecting any change
+                start_time = time.time()
+                last_state = GPIO.input(TACH_PIN)
+                while time.time() - start_time < max_duration / 2:  # Half duration for retry
+                    current_state = GPIO.input(TACH_PIN)
+                    if current_state != last_state:  # Any change
+                        pulse_count += 1
+                        self.logger.debug(f"Pin change detected: {last_state} -> {current_state}")
+                    last_state = current_state
+                    time.sleep(0.0001)
+                
+                # Recalculate elapsed time
+                elapsed_time = time.time() - start_time + max_duration
+            
+            # Calculate RPM
+            if pulse_count == 0 or elapsed_time == 0:
+                self.logger.debug("No tach pulses detected at all")
+                return 0
+            
+            # Standard calculation for 2 pulses per revolution (most PC fans)
+            pulses_per_revolution = 2
+            rpm = (pulse_count * 60) / (pulses_per_revolution * elapsed_time)
+            
+            self.logger.debug(f"Calculated RPM: {rpm:.1f} from {pulse_count} pulses")
+            return rpm
+            
+        except Exception as e:
+            self.logger.error(f"Error reading tachometer: {e}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            return 0
 
     def fan_control_loop(self):
         """Main loop for temperature-based fan control"""
@@ -189,12 +273,27 @@ class FanController:
 
     def tach_check_loop(self):
         """Separate loop for checking fan operation"""
+        warning_reported = False
         while self.running:
             try:
-                rpm = self.read_tach()
-                if rpm < 100 and rpm > 0:  # Threshold for fan failure detection
-                    self.logger.error(f"Fan failure detected! RPM: {rpm:.0f}")
-                    # Add alert or shutdown logic as needed
+                rpm = self.read_tach(duration=2)  # Longer measurement for more accuracy
+                
+                # Get current duty cycle for context
+                temp = self.get_cpu_temperature()
+                current_duty_cycle = self.get_duty_cycle(temp)
+                
+                # Check for potential fan failure
+                if current_duty_cycle > 20 and rpm < 100:
+                    # Only report fan failure if the duty cycle is high enough to expect movement
+                    if not warning_reported:
+                        self.logger.warning(f"Possible fan failure detected! Duty Cycle: {current_duty_cycle}%, but RPM: {rpm:.0f}")
+                        warning_reported = True
+                else:
+                    # Reset warning flag if RPMs are detected again
+                    if warning_reported and rpm >= 100:
+                        self.logger.info(f"Fan operation restored. Current RPM: {rpm:.0f}")
+                        warning_reported = False
+                        
                 time.sleep(TACH_CHECK_INTERVAL)
             except Exception as e:
                 self.logger.error(f"Error in tach check loop: {e}")
@@ -205,8 +304,6 @@ class FanController:
         self.logger.info("Starting fan control service")
         
         try:
-            # Instead of using gpiod, we'll use RPi.GPIO directly since it's more straightforward
-            # for PWM control on the Raspberry Pi
             self.pwm = PWMController(PWM_LINE, PWM_FREQUENCY, logger=self.logger)
             self.pwm.start()
             
@@ -245,19 +342,40 @@ class FanController:
             self.pwm.stop()
             self.pwm = None
             
-        # Clean up GPIO
-        GPIO.cleanup()
+        # Clean up GPIO pins individually
+        try:
+            # Clean up tach pin
+            try:
+                GPIO.remove_event_detect(TACH_PIN)
+            except:
+                pass
+            GPIO.cleanup(TACH_PIN)
+            
+            # Clean up PWM pin
+            GPIO.cleanup(PWM_LINE)
+        except:
+            pass
+            
         self.logger.info("Fan control service stopped")
 
 
-def run_fan_control():
-    """Main function to run the fan control service"""
+def run_fan_control(debug_mode=False):
+    """
+    Main function to run the fan control service
+    
+    Args:
+        debug_mode: Enable debug logging for more verbose output
+    """
     # Configure logging
     logger = setup_logger('fan')
     logger.info("Initializing fan control service")
     
-    # Create fan controller
-    controller = FanController(logger=logger)
+    if debug_mode:
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debug mode enabled")
+    
+    # Create fan controller with debug mode if requested
+    controller = FanController(logger=logger, debug_mode=debug_mode)
     
     try:
         # Start fan controller
@@ -285,6 +403,9 @@ def run_fan_control():
         logger.info("Fan control service stopped")
 
 
-# This makes the module directly executable
 if __name__ == "__main__":
-    run_fan_control()
+    # Check for debug flag in arguments
+    debug_mode = "--debug" in sys.argv or "-d" in sys.argv
+    
+    # Run the fan controller
+    run_fan_control(debug_mode=debug_mode)

@@ -8,7 +8,7 @@ Group=root
 WorkingDirectory=/home/Kepler/CosmiCam
 Environment="PYTHONPATH=/home/Kepler/CosmiCam"
 Environment="COSMICAM_ROOT=/home/Kepler/CosmiCam"
-ExecStart=/home/Kepler/CosmiCam/venv/bin/python3 -m src.hardware.fan_control
+ExecStart=/home/Kepler/CosmiCam/venv/bin/python3 /home/Kepler/CosmiCam/run_fan_control.py
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1

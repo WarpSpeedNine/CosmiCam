@@ -1,9 +1,12 @@
 from flask import Flask
 import logging
+from dotenv import load_dotenv
 
 from src.config import config
 from src.utils import setup_logger
 from .routes import register_routes
+
+load_dotenv()
 
 def create_app():
     """

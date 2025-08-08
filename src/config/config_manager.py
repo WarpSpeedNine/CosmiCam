@@ -26,7 +26,7 @@ class ConfigManager:
         self.app_root = os.environ.get('COSMICAM_ROOT', os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         
         # Configuration directories
-        self.config_dir = os.path.join(self.app_root, 'config')
+        self.config_dir = os.path.join(self.app_root, 'src', 'config')
         self.log_dir = '/var/log/cosmicam'
         
         # Default configurations

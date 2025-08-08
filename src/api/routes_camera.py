@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, Response, request
 import logging
 
+from src.utils.auth import require_admin_access
 from src.config import config
 from src.camera import CameraSettings
 
@@ -15,6 +16,7 @@ def register_camera_routes(app: Flask):
     camera_settings = CameraSettings(logger=logger)
     
     @app.route('/api/coordinates', methods=['GET', 'POST'])
+    @require_admin_access
     def handle_coordinates() -> Response:
         """Get or update geographic coordinates"""
         try:

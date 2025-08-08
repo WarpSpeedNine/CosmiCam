@@ -129,6 +129,14 @@ celerybeat.pid
 
 # Environments
 .env
+.env*
+*.env
+!.env.example
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
 .venv
 env/
 venv/
@@ -169,3 +177,26 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# SSL certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# API keys and secrets (backup protection)
+*secret*
+*key*.txt
+*token*.txt
+api_keys.yaml
+secrets.yaml
+
+# Backup files that might contain sensitive data
+*.backup
+*.bak
+
+# Database files that might contain sensitive data
+*.db
+*.sqlite
+*.sqlite3

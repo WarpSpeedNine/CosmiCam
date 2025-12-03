@@ -39,31 +39,44 @@ class CameraController:
             self.logger.info(f"Created directory: {self.image_dir}")
 
     def build_libcamera_command(self, filepath: str, settings: Dict[str, Any]) -> List[str]:
-        """
-        Build the libcamera command with all relevant parameters
-        
-        Args:
-            filepath: Path where the captured image should be saved
-            settings: Camera settings to apply
-            
-        Returns:
-            List[str]: Command list for subprocess execution
-        """
+        """Build the libcamera command with all relevant parameters"""
         cmd = [
             "libcamera-still",
             "-o", filepath,
             "--width", "4056",
             "--height", "3040"
         ]
-        
-        if settings["shutter_speed"] > 0:
+    
+        # Handle shutter speed
+        if settings.get("shutter_speed", 0) > 0:
             cmd.extend(["--shutter", str(settings["shutter_speed"])])
-        if settings["gain"] > 0:
-            cmd.extend(["--gain", str(settings["gain"])])
-        if settings["brightness"] is not None:  # Allow 0 as valid value
-            cmd.extend(["--brightness", str(settings["brightness"])])
-        if settings["contrast"] > 0:  # Since contrast 0 makes no sense
+    
+        # Changed to use analoggain instead of gain
+        if settings.get("gain", 0) > 0:
+            cmd.extend(["--analoggain", str(settings["gain"])])
+    
+        # Only add brightness if is </> 0 and is not None
+        brightness = settings.get("brightness")
+        if brightness is not None and brightness != 0:
+            cmd.extend(["--brightness", str(brightness)])
+    
+        # Only add contrast if it exists and is greater than 0
+        if settings.get("contrast", 0) > 0:
             cmd.extend(["--contrast", str(settings["contrast"])])
+    
+        # Add AWB gains if they exist
+        if "awbgains" in settings and settings["awbgains"]:
+            # Handle both array format [2.5, 2.0] and string format "2.5,2.0"
+            if isinstance(settings["awbgains"], list):
+                red_gain, blue_gain = settings["awbgains"]
+                awb_value = f"{red_gain},{blue_gain}"
+            else:
+                awb_value = str(settings["awbgains"])
+            cmd.extend(["--awbgains", awb_value])
+    
+        # Add immediate flag if specified
+        if settings.get("immediate", False):
+            cmd.append("--immediate")
     
         return cmd
 

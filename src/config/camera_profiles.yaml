@@ -4,34 +4,45 @@ default:
   shutter_speed: 0  # Auto
   gain: 0           # Auto
   brightness: 0
+  awbgains: []
+  immediate: false
   contrast: 1.0
 
 day:
   shutter_speed: 0  # Auto
   gain: 0           # Auto
   brightness: 0
+  awbgains: []
+  immediate: false
   contrast: 1.0
 
 civil_twilight:
-  shutter_speed: 100000    # 100ms
-  gain: 1.5
-  brightness: 0.2
-  contrast: 1.1
+  shutter_speed: 0    
+  gain: 0
+  brightness: 0
+  awbgains: []
+  immediate: false
+  contrast: 0
 
 nautical_twilight:
-  shutter_speed: 1000000   # 1s
-  gain: 1.8
-  brightness: 0.3
+  shutter_speed: 0   
+  gain: 0
+  brightness: 0.0
+  awbgains: []
+  immediate: false
   contrast: 1.2
 
 astronomical_twilight:
-  shutter_speed: 3000000   # 3s
-  gain: 2.0
-  brightness: 0.4
+  shutter_speed: 0   
+  gain: 0
+  brightness: 0
   contrast: 1.3
 
 night:
-  shutter_speed: 6000000   # 6s
-  gain: 2.0
-  brightness: 0.5
-  contrast: 1.4
+  shutter_speed: 2000000   # 10s
+  gain: 4
+  brightness: 0
+  awbgains: [2.5, 2.0]
+  immediate: true
+  contrast: 0
+

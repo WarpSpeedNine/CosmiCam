@@ -3,6 +3,7 @@ import logging
 
 from .routes_image import register_image_routes
 from .routes_camera import register_camera_routes
+from .routes_system import register_system_routes
 
 def register_routes(app: Flask):
     """
@@ -14,6 +15,7 @@ def register_routes(app: Flask):
     # Register route groups
     register_image_routes(app)
     register_camera_routes(app)
+    register_system_routes(app)
     
     # Register error handlers
     @app.errorhandler(404)

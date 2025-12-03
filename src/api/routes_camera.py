@@ -68,3 +68,38 @@ def register_camera_routes(app: Flask):
         except Exception as e:
             logger.exception("Error getting camera profile")
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/camera/profiles', methods=['PUT'])
+    @require_admin_access
+    def edit_camera_profile() -> Response:
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+            
+            current_profiles = config.get_config('camera_profiles')
+
+            for profile_name, setting in data.items():
+                if profile_name not in current_profiles:
+                    return jsonify({'error':'Please update one of the following profiles: default, day, civil_twilight, nautical_twilight, astronomical_twilight, or night'}), 400
+
+                valid_fields=['shutter_speed', 'gain', 'brightness', 'contrast']
+
+                for field, value in setting.items():
+                    if field not in valid_fields:
+                        return jsonify({'error': f'Invalid field {field} in profile {profile_name}'}), 400
+            
+                current_profiles[profile_name].update(setting)
+            
+            success = config.update_config('camera_profiles', current_profiles)
+            if success:
+                return jsonify({'message': 'Camera profiles updated successfully'}), 200
+            else:
+                return jsonify({'error': 'Failed to update camera profiles'}), 500
+                
+        except Exception as e:
+            logger.exception("Error updating camera profiles")
+            return jsonify({'error': str(e)}), 500
+
+
+                

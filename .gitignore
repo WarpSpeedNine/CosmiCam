@@ -200,3 +200,10 @@ secrets.yaml
 *.db
 *.sqlite
 *.sqlite3
+
+# cloudflared files
+# Cloudflare Tunnel
+.cloudflared/
+*.json
+/etc/cloudflared/config.yml
+config.yml
